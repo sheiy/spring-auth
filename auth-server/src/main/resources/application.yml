@@ -1,0 +1,33 @@
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: DEBUG
+        type:
+          descriptor:
+            sql:
+              BasicBinder: TRACE
+server:
+  error:
+    include-stacktrace: always
+spring:
+  jpa:
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQL57InnoDBDialect
+    hibernate:
+      ddl-auto: update
+  mail:
+    host: smtp.qq.com
+    password: ####
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+    username: ####
+  servlet:
+    multipart:
+      max-file-size: 1000
+      max-request-size: 1000

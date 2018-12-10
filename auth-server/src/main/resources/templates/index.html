@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{css/element.css}">
+    <style>
+        .el-header {
+            background-color: #B3C0D1;
+            color: #333;
+            text-align: center;
+            line-height: 60px;
+        }
+
+        .el-footer {
+            background-color: #B3C0D1;
+            color: #333;
+            text-align: center;
+            line-height: 60px;
+        }
+
+        .el-aside {
+            background-color: #D3DCE6;
+            color: #333;
+            text-align: center;
+            line-height: 200px;
+        }
+
+        .el-main {
+            background-color: #E9EEF3;
+            color: #333;
+            text-align: center;
+            line-height: 160px;
+        }
+
+        body > .el-container {
+            margin-bottom: 40px;
+        }
+
+        .el-container:nth-child(5) .el-aside,
+        .el-container:nth-child(6) .el-aside {
+            line-height: 260px;
+        }
+
+        .el-container:nth-child(7) .el-aside {
+            line-height: 320px;
+        }
+    </style>
+</head>
+<body style="margin: 0;border: 0;">
+<div id="app">
+    <el-container>
+        <el-header>
+            权限管理系统
+        </el-header>
+        <el-container style="min-height: 600px">
+            <el-aside width="200px">
+                <el-menu class="el-menu-vertical-demo" @select="handleSelect">
+                    <el-menu-item index="1">
+                        <span slot="title">用户管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="2">
+                        <span slot="title">角色管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="3">
+                        <span slot="title">权限URL管理</span>
+                    </el-menu-item>
+                    <el-submenu index="4">
+                        <template slot="title">
+                            <span>Resource管理</span>
+                        </template>
+                        <el-menu-item index="4-1">Client管理</el-menu-item>
+                        <el-menu-item index="4-2">Scope管理</el-menu-item>
+                    </el-submenu>
+                </el-menu>
+            </el-aside>
+            <el-main>
+                <div v-show="activeIndex === '0'">Welcome</div>
+                <!--用户管理-->
+                <div v-show="activeIndex === '1'">
+                    <el-container>
+                        <el-button type="primary" icon="el-icon-circle-plus" @click="showUserDialog">添加用户</el-button>
+                    </el-container>
+                    <el-table
+                            v-loading="userData.loading"
+                            :data="userData.gridData"
+                            border
+                            style="min-height: 500px;margin-top: 5px">
+                        <el-table-column
+                                fixed
+                                prop="username"
+                                label="用户名">
+                        </el-table-column>
+                        <el-table-column
+                                prop="nickName"
+                                label="昵称">
+                        </el-table-column>
+                        <el-table-column
+                                prop="createdDate"
+                                label="注册时间"
+                                style="min-width: 190px">
+                            <template slot-scope="scope">
+                                <span>{{ renderDate(scope.createdDate) }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="email"
+                                label="邮箱">
+                        </el-table-column>
+                        <el-table-column
+                                prop="phone"
+                                label="手机号">
+                        </el-table-column>
+                        <el-table-column
+                                prop="enable"
+                                label="状态">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.enable===true?'已启用':'已禁用' }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作">
+                            <template slot-scope="scope">
+                                <el-button @click="editUser(scope.row)" type="text" size="small">编辑</el-button>
+                                <el-button @click="enableOrDisableUser(scope.row.id,true)" type="text" size="small">启用
+                                </el-button>
+                                <el-button @click="enableOrDisableUser(scope.row.id,false)" type="text" size="small">
+                                    禁用
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            @current-change="getUserGridData"
+                            layout="prev, pager, next"
+                            :current-page.sync="userData.currentPage"
+                            :total="userData.totalElements">
+                    </el-pagination>
+                    <el-dialog top="30px"
+                               :visible.sync="userData.dialogFormVisible"
+                               :close-on-press-escape="false"
+                               :close-on-click-modal="false">
+                        <el-form ref="userForm" :model="userData.form">
+                            <el-form-item label="用户名" prop="username">
+                                <el-input v-model="userData.form.username" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="昵称" prop="nickName">
+                                <el-input v-model="userData.form.nickName" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="手机号" prop="phone">
+                                <el-input v-model="userData.form.phone" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="邮箱" prop="email">
+                                <el-input v-model="userData.form.email" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="角色" prop="roles">
+                                <el-select value="userData.form.roles" v-model="userData.form.roles" multiple
+                                           placeholder="请选择">
+                                    <el-option
+                                            v-for="item in roleData.gridData"
+                                            :key="item.id"
+                                            :label="item.nickName"
+                                            :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-form>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button @click="cancelUser">取 消</el-button>
+                            <el-button type="primary" @click="submitUser">确 定</el-button>
+                        </div>
+                    </el-dialog>
+                </div>
+                <!--角色管理-->
+                <div v-show="activeIndex === '2'">
+                    <el-container>
+                        <el-button type="primary" icon="el-icon-circle-plus" @click="showRoleDialog">添加角色</el-button>
+                    </el-container>
+                    <el-table
+                            v-loading="roleData.loading"
+                            :data="roleData.gridData"
+                            border
+                            style="min-height: 500px;margin-top: 5px">
+                        <el-table-column
+                                fixed
+                                prop="nickName"
+                                label="角色名称">
+                        </el-table-column>
+                        <el-table-column
+                                prop="name"
+                                label="角色编码">
+                        </el-table-column>
+                        <el-table-column
+                                prop="createdDate"
+                                label="创建时间">
+                            <template slot-scope="scope">
+                                <span>{{ renderDate(scope.createdDate) }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="comment"
+                                label="备注">
+                        </el-table-column>
+                        <el-table-column
+                                label="操作">
+                            <template slot-scope="scope">
+                                <el-button @click="editRole(scope.row)" type="text" size="small">编辑</el-button>
+                                <el-button @click="delRole(scope.row)" type="text" size="small">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            @current-change="getRoleGridData"
+                            layout="prev, pager, next"
+                            :current-page.sync="roleData.currentPage"
+                            :total="roleData.totalElements">
+                    </el-pagination>
+                    <el-dialog top="30px"
+                               :visible.sync="roleData.dialogFormVisible"
+                               :close-on-press-escape="false"
+                               :close-on-click-modal="false">
+                        <el-form ref="roleForm" :model="roleData.form">
+                            <el-form-item label="角色编码" prop="name">
+                                <el-input v-model="roleData.form.name" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="角色名称" prop="nickName">
+                                <el-input v-model="roleData.form.nickName" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="备注" prop="comment">
+                                <el-input v-model="roleData.form.comment" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="允许访问的路径" prop="permissionUrls">
+                                <el-select value="roleData.form.permissionUrls" v-model="roleData.form.permissionUrls"
+                                           multiple placeholder="请选择">
+                                    <el-option
+                                            v-for="item in urlData.gridData"
+                                            :key="item.id"
+                                            :label="item.resourceId+':'+JSON.stringify(item.url)"
+                                            :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-form>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button @click="cancelRole">取 消</el-button>
+                            <el-button type="primary" @click="submitRole">确 定</el-button>
+                        </div>
+                    </el-dialog>
+                </div>
+                <!--权限URL管理-->
+                <div v-show="activeIndex === '3'">
+                    <el-container>
+                        <el-button type="primary" icon="el-icon-circle-plus" @click="showUrlDialog">添加权限URL</el-button>
+                    </el-container>
+                    <el-table
+                            v-loading="urlData.loading"
+                            :data="urlData.gridData"
+                            border
+                            style="min-height: 500px;margin-top: 5px">
+                        <el-table-column
+                                fixed
+                                prop="resourceId"
+                                label="资源服务器标识">
+                        </el-table-column>
+                        <el-table-column
+                                fixed
+                                prop="url"
+                                label="允许访问的地址">
+                            <template slot-scope="scope">
+                                <span>{{scope.row.url.join(',')}}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="comment"
+                                label="备注">
+                        </el-table-column>
+                        <el-table-column
+                                prop="enable"
+                                label="状态">
+                            <template slot-scope="scope">
+                                <span>{{scope.row.enable?'已启用':'已禁用'}}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作">
+                            <template slot-scope="scope">
+                                <el-button @click="editPermissionUrl(scope.row)" type="text" size="small">
+                                    编辑
+                                </el-button>
+                                <template v-if="scope.row.enable">
+                                    <el-button @click="enableOrDisablePermissionUrl(scope.row.id,false)" type="text"
+                                               size="small">
+                                        禁用
+                                    </el-button>
+                                </template>
+                                <template v-else>
+                                    <el-button @click="enableOrDisablePermissionUrl(scope.row.id,true)" type="text"
+                                               size="small">启用
+                                    </el-button>
+                                </template>
+                                <el-button @click="delPermissionUrl(scope.row)" type="text"
+                                           size="small">
+                                    删除
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            @current-change="getUrlGridData"
+                            layout="prev, pager, next"
+                            :current-page.sync="urlData.currentPage"
+                            :total="urlData.totalElements">
+                    </el-pagination>
+                    <el-dialog top="30px"
+                               :visible.sync="urlData.dialogFormVisible"
+                               :close-on-press-escape="false"
+                               :close-on-click-modal="false">
+                        <el-form ref="urlForm" :model="urlData.form">
+                            <el-form-item label="资源服务器标识" prop="resourceId">
+                                <el-input v-model="urlData.form.resourceId" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="允许访问的地址,多个时用英文逗号分隔" prop="url">
+                                <el-input v-model="urlData.form.url" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="启用" prop="enable">
+                                <el-switch
+                                        v-model="urlData.form.enable"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949">
+                                </el-switch>
+                            </el-form-item>
+                            <el-form-item label="描述" prop="comment">
+                                <el-input v-model="urlData.form.comment" autocomplete="off"></el-input>
+                            </el-form-item>
+                        </el-form>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button @click="cancelUrl">取 消</el-button>
+                            <el-button type="primary" @click="submitUrl">确 定</el-button>
+                        </div>
+                    </el-dialog>
+                </div>
+                <!--Client管理-->
+                <div v-show="activeIndex === '4-1'">
+                    <el-container>
+                        <el-button type="primary" icon="el-icon-circle-plus" @click="showClientDialog">添加Client
+                        </el-button>
+                    </el-container>
+                    <el-table
+                            v-loading="clientData.loading"
+                            :data="clientData.gridData"
+                            border
+                            style="min-height: 500px;margin-top: 5px">
+                        <el-table-column
+                                fixed
+                                prop="clientId"
+                                label="ClientId">
+                        </el-table-column>
+                        <el-table-column
+                                prop="owner"
+                                label="所有者">
+                        </el-table-column>
+                        <el-table-column
+                                prop="autoApprove"
+                                label="自动通过">
+                            <template slot-scope="scope">
+                                <span>{{ scope.row.autoApprove===true?'是':'否' }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="createdDate"
+                                label="创建时间">
+                            <template slot-scope="scope">
+                                <span>{{ renderDate(scope.createdDate) }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作">
+                            <template slot-scope="scope">
+                                <el-button @click="editClient(scope.row)" type="text" size="small">编辑</el-button>
+                                <el-button @click="delClient(scope.row)" type="text" size="small">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            @current-change="getClientGridData"
+                            layout="prev, pager, next"
+                            :current-page.sync="clientData.currentPage"
+                            :total="clientData.totalElements">
+                    </el-pagination>
+                    <el-dialog top="30px"
+                               :visible.sync="clientData.dialogFormVisible"
+                               :close-on-press-escape="false"
+                               :close-on-click-modal="false">
+                        <el-form :model="clientData.form" ref="clientForm">
+                            <el-form-item label="所有者" prop="owner">
+                                <el-input v-model="clientData.form.owner" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="允许使用的授权类型" prop="authorizedGrantTypes">
+                                <el-select v-model="clientData.form.authorizedGrantTypes"
+                                           multiple placeholder="请选择">
+                                    <el-option
+                                            v-for="item in clientData.grantTypeOptions"
+                                            :key="item.value"
+                                            :label="item.label"
+                                            :value="item.value">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="回调地址,多个时用英文逗号分隔" prop="registeredRedirectUri">
+                                <el-input v-model="clientData.form.registeredRedirectUri" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="角色" prop="roles">
+                                <el-select value="clientData.form.roles" v-model="clientData.form.roles" multiple
+                                           placeholder="请选择">
+                                    <el-option
+                                            v-for="item in roleData.gridData"
+                                            :key="item.id"
+                                            :label="item.nickName"
+                                            :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="Scope" prop="scopes">
+                                <el-select value="clientData.form.scopes" v-model="clientData.form.scopes"
+                                           multiple placeholder="请选择">
+                                    <el-option
+                                            v-for="item in scopeData.gridData"
+                                            :key="item.id"
+                                            :label="item.name"
+                                            :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="自动通过" prop="autoApprove">
+                                <el-switch
+                                        v-model="clientData.form.autoApprove"
+                                        active-color="#13ce66"
+                                        inactive-color="#ff4949">
+                                </el-switch>
+                            </el-form-item>
+                        </el-form>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button @click="cancelClient">取 消</el-button>
+                            <el-button type="primary" @click="submitClient">确 定</el-button>
+                        </div>
+                    </el-dialog>
+                </div>
+                <!--Scope管理-->
+                <div v-show="activeIndex === '4-2'">
+                    <el-container>
+                        <el-button type="primary" icon="el-icon-circle-plus" @click="showScopeDialog">添加Scope
+                        </el-button>
+                    </el-container>
+                    <el-table
+                            v-loading="scopeData.loading"
+                            :data="scopeData.gridData"
+                            border
+                            style="min-height: 500px;margin-top: 5px">
+                        <el-table-column
+                                fixed
+                                prop="name"
+                                label="Scope">
+                        </el-table-column>
+                        <el-table-column
+                                prop="desc"
+                                label="权限访问提示描述">
+                        </el-table-column>
+                        <el-table-column
+                                prop="comment"
+                                label="备注">
+                        </el-table-column>
+                        <el-table-column
+                                prop="createdDate"
+                                label="创建时间">
+                            <template slot-scope="scope">
+                                <span>{{ renderDate(scope.createdDate) }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                label="操作">
+                            <template slot-scope="scope">
+                                <el-button @click="editScope(scope.row)" type="text" size="small">编辑</el-button>
+                                <el-button @click="delScope(scope.row)" type="text" size="small">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination
+                            @current-change="getScopeGridData"
+                            layout="prev, pager, next"
+                            :current-page.sync="scopeData.currentPage"
+                            :total="scopeData.totalElements">
+                    </el-pagination>
+                    <el-dialog top="30px"
+                               :visible.sync="scopeData.dialogFormVisible"
+                               :close-on-press-escape="false"
+                               :close-on-click-modal="false">
+                        <el-form ref="scopeForm" :model="scopeData.form">
+                            <el-form-item label="编码" prop="name">
+                                <el-input v-model="scopeData.form.name" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="权限访问提示描述" prop="desc">
+                                <el-input v-model="scopeData.form.desc" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="备注" prop="comment">
+                                <el-input v-model="scopeData.form.comment" autocomplete="off"></el-input>
+                            </el-form-item>
+                            <el-form-item label="允许访问的路径" prop="permissionUrls">
+                                <el-select value="scopeData.form.permissionUrls" v-model="scopeData.form.permissionUrls"
+                                           multiple placeholder="请选择">
+                                    <el-option
+                                            v-for="item in urlData.gridData"
+                                            :key="item.id"
+                                            :label="item.resourceId+':'+JSON.stringify(item.url)"
+                                            :value="item.id">
+                                    </el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-form>
+                        <div slot="footer" class="dialog-footer">
+                            <el-button @click="cancelScope">取 消</el-button>
+                            <el-button type="primary" @click="submitScope">确 定</el-button>
+                        </div>
+                    </el-dialog>
+                </div>
+            </el-main>
+        </el-container>
+        <el-footer>Power by Vue ElementUI Spring Boot</el-footer>
+    </el-container>
+</div>
+</body>
+<!-- 开发环境版本，包含了有帮助的命令行警告 -->
+<!--<script th:src="@{js/vue.js}"></script>-->
+<!-- 生产环境版本，优化了尺寸和速度 -->
+<script th:src="@{js/vue.min.js}"></script>
+
+<script th:src="@{js/element.js}"></script>
+<script th:src="@{js/axios.min.js}"></script>
+<script th:src="@{js/moment.min.js}"></script>
+<script type="text/javascript" th:inline="javascript">
+    /*<![CDATA[*/
+    const csrfToken = [[${_csrf.token}]];
+    /*]]>*/
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
+    axios.defaults.withCredentials = true;
+    const vm = new Vue({
+        el: '#app',
+        data() {
+            return {
+                userData: {
+                    gridData: [],
+                    totalElements: 0,
+                    currentPage: 1,
+                    dialogFormVisible: false,
+                    loading: true,
+                    form: {
+                        roles: [],
+                        username: '',
+                        nickName: '',
+                        phone: '',
+                        email: '',
+                        enable: true
+                    },
+                },
+                roleData: {
+                    gridData: [],
+                    totalElements: 0,
+                    currentPage: 1,
+                    dialogFormVisible: false,
+                    loading: true,
+                    form: {
+                        name: '',
+                        nickName: '',
+                        comment: '',
+                        permissionUrls: []
+                    },
+                },
+                urlData: {
+                    gridData: [],
+                    totalElements: 0,
+                    currentPage: 1,
+                    dialogFormVisible: false,
+                    loading: true,
+                    form: {
+                        resourceId: '',
+                        url: '',
+                        comment: '',
+                        enable: true
+                    },
+                },
+                clientData: {
+                    gridData: [],
+                    totalElements: 0,
+                    currentPage: 1,
+                    dialogFormVisible: false,
+                    loading: true,
+                    grantTypeOptions: [{
+                        value: 'authorization_code',
+                        label: '授权码模式'
+                    }, {
+                        value: 'password',
+                        label: '密码模式'
+                    }, {
+                        value: 'client_credentials',
+                        label: '客户端模式'
+                    }, {
+                        value: 'implicit',
+                        label: '简化模式'
+                    }, {
+                        value: 'refresh_token',
+                        label: '刷新access_token'
+                    }],
+                    form: {
+                        authorizedGrantTypes: [],
+                        owner: '',
+                        registeredRedirectUri: '',
+                        scopes: [],
+                        roles: [],
+                        autoApprove: true,
+                    },
+                },
+                scopeData: {
+                    gridData: [],
+                    totalElements: 0,
+                    currentPage: 1,
+                    dialogFormVisible: false,
+                    loading: true,
+                    form: {
+                        name: '',
+                        comment: '',
+                        permissionUrls: [],
+                        desc: ''
+                    },
+                },
+                activeIndex: '0',
+            };
+        },
+        created() {
+            this.handleSelect(this.activeIndex);
+        },
+        methods: {
+            resetForm(formName) {
+                if (this.$refs[formName] !== undefined) {
+                    this.$refs[formName].resetFields();
+                }
+            },
+            handleSelect(index) {
+                this.activeIndex = index;
+                switch (this.activeIndex) {
+                    case '1':
+                        this.getRoleGridData(1, 99999);
+                        this.getUserGridData(1, 10);
+                        break;
+                    case '2':
+                        this.getUrlGridData(1, 99999);
+                        this.getRoleGridData(1, 10);
+                        break;
+                    case '3':
+                        this.getUrlGridData(1, 10);
+                        break;
+                    case '4-1':
+                        this.getScopeGridData(1, 99999);
+                        this.getRoleGridData(1, 99999);
+                        this.getClientGridData(1, 10);
+                        break;
+                    case '4-2':
+                        this.getUrlGridData(1, 99999);
+                        this.getScopeGridData(1, 10);
+                        break;
+                }
+            },
+            renderDate(date) {
+                return moment(date).format('YYYY年MM月DD日 HH:mm')
+            },
+            getUserGridData(pageNumber, pageSize) {
+                this.userData.loading = true;
+                axios.get('/user/findUsers?page=' + (pageNumber - 1) + '&size=' + pageSize)
+                    .then(response => {
+                        this.userData.gridData = response.data.content;
+                        this.userData.totalElements = response.data.totalElements;
+                        this.userData.currentPage = response.data.pageable.pageNumber + 1;
+                        this.userData.loading = false;
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    });
+            },
+            getRoleGridData(pageNumber, pageSize) {
+                this.roleData.loading = true;
+                axios.get('/role/findRoles?page=' + (pageNumber - 1) + '&size=' + pageSize)
+                    .then(response => {
+                        this.roleData.gridData = response.data.content;
+                        this.roleData.totalElements = response.data.totalElements;
+                        this.roleData.currentPage = response.data.pageable.pageNumber + 1;
+                        this.roleData.loading = false;
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    });
+            },
+            getUrlGridData(pageNumber, pageSize) {
+                this.urlData.loading = true;
+                axios.get('/permissionUrl/findPermissionUrls?page=' + (pageNumber - 1) + '&size=' + pageSize)
+                    .then(response => {
+                        this.urlData.gridData = response.data.content;
+                        this.urlData.totalElements = response.data.totalElements;
+                        this.urlData.currentPage = response.data.pageable.pageNumber + 1;
+                        this.urlData.loading = false;
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    });
+            },
+            getClientGridData(pageNumber, pageSize) {
+                this.clientData.loading = true;
+                axios.get('/client/findClients?page=' + (pageNumber - 1) + '&size=' + pageSize)
+                    .then(response => {
+                        this.clientData.gridData = response.data.content;
+                        this.clientData.totalElements = response.data.totalElements;
+                        this.clientData.currentPage = response.data.pageable.pageNumber + 1;
+                        this.clientData.loading = false;
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    });
+            },
+            getScopeGridData(pageNumber, pageSize) {
+                this.scopeData.loading = true;
+                axios.get('/scope/findScopes?page=' + (pageNumber - 1) + '&size=' + pageSize)
+                    .then(response => {
+                        this.scopeData.gridData = response.data.content;
+                        this.scopeData.totalElements = response.data.totalElements;
+                        this.scopeData.currentPage = response.data.pageable.pageNumber + 1;
+                        this.scopeData.loading = false;
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    });
+            },
+            showUserDialog() {
+                delete this.userData.form.id;
+                this.resetForm('userForm');
+                this.userData.dialogFormVisible = true;
+            },
+            showUrlDialog() {
+                delete this.urlData.form.id;
+                this.resetForm('urlForm');
+                this.urlData.dialogFormVisible = true;
+            },
+            showRoleDialog() {
+                delete this.roleData.form.id;
+                this.resetForm('roleForm');
+                this.roleData.dialogFormVisible = true;
+            },
+            showClientDialog() {
+                delete this.clientData.form.id;
+                this.resetForm('clientForm');
+                this.clientData.dialogFormVisible = true;
+            },
+            showScopeDialog() {
+                delete this.scopeData.form.id;
+                this.resetForm('scopeForm');
+                this.scopeData.dialogFormVisible = true;
+            },
+            cancelUser() {
+                this.userData.dialogFormVisible = false;
+            },
+            cancelUrl() {
+                this.urlData.dialogFormVisible = false;
+            },
+            cancelRole() {
+                this.roleData.dialogFormVisible = false;
+            },
+            cancelClient() {
+                this.clientData.dialogFormVisible = false;
+            },
+            cancelScope() {
+                this.scopeData.dialogFormVisible = false;
+            },
+            submitUser() {
+                console.log("submitUser", this.userData.form);
+                axios.post("/user/saveUser", this.userData.form)
+                    .then(response => {
+                        this.getUserGridData(1, 10);
+                        this.userData.dialogFormVisible = false;
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            submitRole() {
+                console.log("submitRole", this.roleData.form);
+                axios.post("/role/saveRole", this.roleData.form)
+                    .then(response => {
+                        this.getRoleGridData(1, 10);
+                        this.roleData.dialogFormVisible = false;
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            submitUrl() {
+                console.log("submitUrl", this.urlData.form);
+                this.urlData.form.url = this.urlData.form.url.split(',');
+                axios.post("/permissionUrl/savePermissionUrl", this.urlData.form)
+                    .then(response => {
+                        this.getUrlGridData(1, 10);
+                        this.urlData.dialogFormVisible = false;
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            submitClient() {
+                console.log("submitClient", this.clientData.form);
+                this.clientData.form.registeredRedirectUri = this.clientData.form.registeredRedirectUri.split(',');
+                axios.post("/client/saveClient", this.clientData.form)
+                    .then(response => {
+                        this.getClientGridData(1, 10);
+                        this.clientData.dialogFormVisible = false;
+                        if (response.data.secret) {
+                            this.$alert(response.data.secret, '下面是你的secret你将只有此次查看机会', {confirmButtonText: '确定'});
+                        }
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            submitScope() {
+                console.log("submitScope", this.scopeData.form);
+                axios.post("/scope/saveScope", this.scopeData.form)
+                    .then(response => {
+                        this.getScopeGridData(1, 10);
+                        this.scopeData.dialogFormVisible = false;
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            editUser(user) {
+                this.showUserDialog();
+                this.$nextTick(() => {
+                    this.userData.form.id = user.id;
+                    this.userData.form.username = user.username;
+                    this.userData.form.nickName = user.nickName;
+                    this.userData.form.phone = user.phone;
+                    this.userData.form.email = user.email;
+                    this.userData.form.roles = user.roles.map(role => role.id);
+                });
+            },
+            editRole(role) {
+                this.showRoleDialog();
+                this.$nextTick(() => {
+                    this.roleData.form.id = role.id;
+                    this.roleData.form.name = role.name;
+                    this.roleData.form.nickName = role.nickName;
+                    this.roleData.form.comment = role.comment;
+                    this.roleData.form.permissionUrls = role.permissionUrls.map(it => it.id);
+                });
+            },
+            editScope(scope) {
+                this.showScopeDialog();
+                this.$nextTick(() => {
+                    this.scopeData.form.id = scope.id;
+                    this.scopeData.form.name = scope.name;
+                    this.scopeData.form.desc = scope.desc;
+                    this.scopeData.form.comment = scope.comment;
+                    this.scopeData.form.permissionUrls = scope.permissionUrls.map(it => it.id);
+                });
+            },
+            editPermissionUrl(permissionUrl) {
+                this.showUrlDialog();
+                this.$nextTick(() => {
+                    this.urlData.form.id = permissionUrl.id;
+                    this.urlData.form.resourceId = permissionUrl.resourceId;
+                    this.urlData.form.url = permissionUrl.url.join(',');
+                    this.urlData.form.desc = permissionUrl.desc;
+                    this.urlData.form.comment = permissionUrl.comment;
+                    this.urlData.form.enable = permissionUrl.enable;
+                });
+            },
+            editClient(client) {
+                this.showClientDialog();
+                this.$nextTick(() => {
+                    this.clientData.form.id = client.id;
+                    this.clientData.form.owner = client.owner;
+                    this.clientData.form.authorizedGrantTypes = client.authorizedGrantTypes;
+                    this.clientData.form.registeredRedirectUri = client.registeredRedirectUri.join(',');
+                    this.clientData.form.scopes = client.scopes.map(it => it.id);
+                });
+            },
+            delRole(role) {
+                this.roleData.loading = true;
+                this.$confirm('此操作将永久删除该角色, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    axios.delete("/role/" + role.id)
+                        .then(response => {
+                            this.getClientGridData(1, 10);
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                        })
+                        .catch(error => {
+                            this.$message.error(error.response.data.message);
+                            this.roleData.loading = false;
+                        })
+                }).catch(() => {
+                    this.roleData.loading = false;
+                });
+            },
+            delPermissionUrl(permissionUrl) {
+                this.urlData.loading = true;
+                this.$confirm('此操作将永久删除该权限URL, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    axios.delete("/permissionUrl/" + permissionUrl.id)
+                        .then(response => {
+                            this.getUrlGridData(1, 10);
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                        })
+                        .catch(error => {
+                            this.$message.error(error.response.data.message);
+                            this.urlData.loading = false;
+                        })
+                }).catch(() => {
+                    this.urlData.loading = false;
+                });
+            },
+            delClient(client) {
+                this.clientData.loading = true;
+                this.$confirm('此操作将永久删除该Client, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    axios.delete("/client/" + client.id)
+                        .then(response => {
+                            this.getClientGridData(1, 10);
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                        })
+                        .catch(error => {
+                            this.$message.error(error.response.data.message);
+                            this.clientData.loading = false;
+                        })
+                }).catch(() => {
+                    this.clientData.loading = false;
+                });
+            },
+            delScope(scope) {
+                this.scopeData.loading = true;
+                this.$confirm('此操作将永久删除该Scope, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    axios.delete("/scope/" + scope.id)
+                        .then(response => {
+                            this.getScopeGridData(1, 10);
+                            this.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                        })
+                        .catch(error => {
+                            this.$message.error(error.response.data.message);
+                            this.scopeData.loading = false;
+                        })
+                }).catch(() => {
+                    this.scopeData.loading = false;
+                });
+            },
+            enableOrDisableUser(id, able) {
+                this.userData.loading = true;
+                this.userData.form = {};
+                this.userData.form.enable = able;
+                this.userData.form.id = id;
+                axios.post("/user/saveUser", this.userData.form)
+                    .then(response => {
+                        this.getUserGridData(1, 10);
+                        this.userData.form = {enable: true};
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.userData.loading = false;
+                        this.$message.error(error.response.data.message);
+                    })
+            },
+            enableOrDisablePermissionUrl(id, able) {
+                this.urlData.loading = true;
+                axios.post("/permissionUrl/savePermissionUrl", {id: id, enable: able})
+                    .then(response => {
+                        this.getUrlGridData(1, 10);
+                        this.$message({
+                            message: '操作成功',
+                            type: 'success'
+                        });
+                    })
+                    .catch(error => {
+                        this.urlData.loading = false;
+                        this.$message.error(error.response.data.message);
+                    })
+            }
+        }
+    })
+</script>
+</html>

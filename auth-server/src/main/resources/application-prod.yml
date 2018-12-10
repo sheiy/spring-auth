@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    password: ####
+    url: jdbc:mysql://####
+    username: ####
+  redis:
+    host: ####
+    password: ####

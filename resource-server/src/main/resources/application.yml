@@ -1,0 +1,8 @@
+server:
+  port: 8081
+security:
+  oauth2:
+    resource:
+      id: demo-resource-server
+      prefer-token-info: false
+      user-info-uri: http://127.0.0.1:8080/api/auth/user
